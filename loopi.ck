@@ -27,7 +27,8 @@ adc => PitShift pitch => Gain g => dac;
 
 //adc => PitShift recordPitch => Gain recordGain => dac;
 PitShift recordPitch;
-
+1 => recordPitch.mix;
+1 => recordPitch.shift;
 SndBuf buf;
 buf => recordPitch => dac;
 
@@ -102,9 +103,9 @@ while( true )
             if(msg.which == 6 && Std.fabs(msg.axisPosition) > .2){
                 //pitch.shift() + .1 => pitch.shift;
                 if (msg.axisPosition > 0){
-                    recordPitch.shift() + .5 => recordPitch.shift;
+                    recordPitch.shift() + .025 => recordPitch.shift;
                 }else{
-                    recordPitch.shift() - .5 => recordPitch.shift;
+                    recordPitch.shift() - .025 => recordPitch.shift;
                 }
                 //recordPitch.shift() + 1 => recordPitch.shift;
                 <<< recordPitch.shift() >>>;
@@ -158,18 +159,11 @@ while( true )
 				// pull samples from the dac
 				// WvOut2 -> stereo operation
 				dac => w => blackhole;
-				
-				// set the prefix, which will prepended to the filename
-				// do this if you want the file to appear automatically
-				// in another directory.  if this isn't set, the file
-				// should appear in the directory you run chuck from
-				// with only the date and time.
+
 				"chuck-session" => w.autoPrefix;
 				
 				// this is the output file name
 				loopNum + ".wav" => w.wavFilename;
-				
-				// print it out
 				
 				
 				// any gain you want for the output
@@ -183,12 +177,6 @@ while( true )
 				//while( recording == 1 ) 1::second => now;
 			}else if(recording == 1){
 				
-				//now => recStopTime;
-				//<<< "time started was: " , startTime >>>;
-				//<<< "time stopped was: " , stopTime >>>;
-				//stopTime - startTime => dur durationPressed;
-				//<<< "Duration was: " , durationPressed >>>;
-				//0 => recording;
                 
                 <<<"writing to file: ", w.filename()>>>;
                 
@@ -303,10 +291,10 @@ fun void startLoop() {
     
     
     playNum + ".wav" => string filename;
-
-    filename => buf.read;
+    
+    
     while(true){
-        
+        filename => buf.read;
         buf.length() => now;
         
     }
