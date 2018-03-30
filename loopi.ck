@@ -19,9 +19,17 @@ if( !hi.openJoystick( device ) ) me.exit();
 0.15 => float maxDeadZone;
 -0.15 => float minDeadZone; 
 
-SinOsc m => SinOsc c => dac;
+SinOsc m => SinOsc c => Gain oscGain => dac;
 
- adc => PitShift pitch => Gain g => dac;
+.4 => oscGain.gain;
+
+adc => PitShift pitch => Gain g => dac;
+
+//adc => PitShift recordPitch => Gain recordGain => dac;
+PitShift recordPitch;
+
+SndBuf buf;
+buf => recordPitch => dac;
 
 			// carrier frequency
 			220 => int carFreq;
@@ -83,11 +91,24 @@ while( true )
                 carFreq => c.freq;
 
             }
-            if(msg.which == 3 && Std.fabs(msg.axisPosition) > .2){
+            
+            if(msg.which == 3 && Std.fabs(msg.axisPosition) > .2){ // WHAMMY BAR
                 msg.axisPosition * 1.5 => pitch.shift;
                 // .5 => pitch.shift;
             }else if((absPos < .2) && (msg.which == 3)){
                 1 => pitch.shift;
+            }
+            
+            if(msg.which == 6 && Std.fabs(msg.axisPosition) > .2){
+                //pitch.shift() + .1 => pitch.shift;
+                if (msg.axisPosition > 0){
+                    recordPitch.shift() + .5 => recordPitch.shift;
+                }else{
+                    recordPitch.shift() - .5 => recordPitch.shift;
+                }
+                //recordPitch.shift() + 1 => recordPitch.shift;
+                <<< recordPitch.shift() >>>;
+                <<< pitch.shift() >>>;
             }
             
 		//}else{
@@ -193,48 +214,48 @@ while( true )
 			<<< "time now is: " , now >>>;
 		}
 		if(msg.which == 5){
-//demonstrate using track=1 mode with LiSa
-//
-//when track == 1, the input is used to control playback position
-//input [0,1] will control playback position within loop marks
-//input values less than zero are multiplied by -1, so it is possible to use
-//audio signals [-1, 1] to control playback position, as in waveshaping
+            //demonstrate using track=1 mode with LiSa
+            //
+            //when track == 1, the input is used to control playback position
+            //input [0,1] will control playback position within loop marks
+            //input values less than zero are multiplied by -1, so it is possible to use
+            //audio signals [-1, 1] to control playback position, as in waveshaping
 
-//signal chain; record a sine wave, play it back
-//SinOsc s => LiSa loopme => dac;
-//adc => LiSa loopme => dac;
-dac => LiSa loopme;
-//s => dac;
-//440. => s.freq;
+            //signal chain; record a sine wave, play it back
+            //SinOsc s => LiSa loopme => dac;
+            //adc => LiSa loopme => dac;
+            dac => LiSa loopme;
+            //s => dac;
+            //440. => s.freq;
 
-//alloc memory
-9::second => loopme.duration;
-1000::ms => loopme.loopEndRec;
-1000::ms => loopme.loopEnd;
+            //alloc memory
+            2::second => loopme.duration;
+            1000::ms => loopme.loopEndRec;
+            1000::ms => loopme.loopEnd;
 
-//set recording ramp time
-loopme.recRamp(50::ms);
-loopme.feedback(0.99); //retain some while loop recording
+            //set recording ramp time
+            loopme.recRamp(50::ms);
+            loopme.feedback(0.99); //retain some while loop recording
 
-//start recording input
-loopme.record(1);
+            //start recording input
+            loopme.record(1);
 
-//1 sec later, this time DON'T stop recording....
-1000::ms => now;
+            //1 sec later, this time DON'T stop recording....
+            1000::ms => now;
 
 
-//set track mode to 1, where the input chooses playback position
- //1 => loopme.track;
-//this time don't change the freq; scan through zippy quick
+            //set track mode to 1, where the input chooses playback position
+             //1 => loopme.track;
+            //this time don't change the freq; scan through zippy quick
 
-loopme.play(1);
-loopme.gain(0.01);
-8000::ms => now;
-loopme.rampDown(250::ms);
-500::ms => now;
+            loopme.play(1);
+            loopme.gain(0.01);
+            2000::ms => now;
+            loopme.rampDown(250::ms);
+            500::ms => now;
 
-//pretty farking scary
-//bye bye
+            //pretty farking scary
+            //bye bye
 		}
         }
         
@@ -279,11 +300,13 @@ fun void startLoop() {
     loopNum => int playNum;
     loopNum + 1 => loopNum;
     // => dur loopLength;
+    
+    
+    playNum + ".wav" => string filename;
+
+    filename => buf.read;
     while(true){
-        SndBuf buf;
-        playNum + ".wav" => string filename;
-        filename => buf.read;
-        buf => dac;
+        
         buf.length() => now;
         
     }
@@ -293,11 +316,13 @@ fun void startLoop() {
 fun void newLoop(){
 	//ADC => LiSa saveme => DAC;
 	//dac => LiSa saveme;
-	SinOsc s => LiSa saveme => dac;
+	SinOsc s => LiSa saveme => recordPitch => dac;
 	//s => dac;
 	//440 => s.freq;
 	//.2 => s.gain;
 	
+    
+    
 	// required memory allocation
 	60::second => saveme.duration;
 	
